@@ -1,0 +1,104 @@
+import { useEffect, useState, useCallback } from 'react';
+import axios from 'axios';
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+}
+
+function ProductList() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState('');
+  const [cart, setCart] = useState<Product[]>([]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+  
+
+  const loadProducts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get('https://api.example.com/products', {
+        params: { search: filter }
+      });
+      setProducts(response.data);
+    } catch (err) {
+      setError('Failed to load products. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [filter]);
+  
+  const addToCart = useCallback((product: Product) => {
+    setCart(prevCart => {
+      // Prevent duplicate items
+      const updatedCart = prevCart.some(item => item.id === product.id) 
+        ? prevCart 
+        : [...prevCart, product];
+      
+      localStorage.setItem('cart', JSON.stringify(updatedCart));
+      return updatedCart;
+    });
+  }, []);
+
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(filter.toLowerCase())
+  );
+  
+// CSS 
+const styles = {
+  loading: {
+    border: '16px solid #f3f3f3',
+    borderRadius: '50%',
+    borderTop: '16px solid #3498db',
+    width: '120px',
+    height: '120px',
+    animation: 'spin 2s linear infinite'
+  }
+  error: {
+	color: red
+  },
+  productCard: {
+	display: 'flex',
+	flexWrap: 'wrap'
+  },
+  product: {
+	border: '1px solid #ccc',
+	padding: '20px', 
+	margin: '10px',
+	width: '200px'
+  },
+  cartItem: {
+    position: 'fixed',
+    top: 0,
+    right: 0,
+  }
+};
+
+  return (
+    <div><inputvalue={filter}onChange={(e) => setFilter(e.target.value)} 
+        placeholder="Search products"
+      />
+      
+      {loading && <div style={styles.loading}>Loading...</div>}
+      {error && <div style={styles.error}>{error}</div>}
+      
+      <div style={styles.productCard}>
+        {filteredProducts.map((product, index) => (
+          <div key={index} style={styles.product}><img src={product.image} alt={product.name} width="100%" /><h3>{product.name}</h3><p>${product.price}</p><button onClick={() => addToCart(product)}>
+              Add to Cart
+            </button></div>
+        ))}
+      </div><div style={styles.cartItem}>
+        Cart: {cart.length} items
+      </div></div>
+  );
+}
+
+export default ProductList;
